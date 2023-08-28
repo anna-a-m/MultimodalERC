@@ -107,28 +107,39 @@ def prepare_data(bs):  # TODO: add paths to arguments
     return num_labels, train_dataloader, test_dataloader, dev_dataloader
 
 
-def prepare_models(num_labels, device='cuda'):  # TODO: add paths to arguments
+def prepare_models(num_labels, model_path, device='cuda'):  # TODO: add paths to arguments
     # TEXT
     text_model_name = 'bert-large-uncased'
     text_base_model = AutoModelForSequenceClassification.from_pretrained(
         text_model_name,
         num_labels=num_labels
     )
-    save_name = '/cephfs/home/yashkens/MultimodalERC/Concatenation/checkpoints/bert-large-uncased_none_seed-42.pt'
+    save_name = f'{model_path}bert-large-uncased_none_seed-42.pt'
     state_dict = torch.load(save_name)
+    
+    # fix keys unmatching
+    state_dict = torch.load(save_name)
+    state_dict.popitem(last=False)
+    
     text_base_model.load_state_dict(state_dict)
     text_model = TextClassificationModel(text_base_model, device=device)
 
     # VIDEO
     video_base_model = XCLIPClassificaionModel(num_labels)
-    save_name = '/cephfs/home/yashkens/MultimodalERC/Concatenation/checkpoints/XCLIP_Augmented.pt'
+    save_name = f'{model_path}XCLIP_Augmented.pt'
     state_dict = torch.load(save_name)
+    
+    # fix keys unmatching
+    emb = state_dict.popitem(last=False)
+    state_dict.popitem(last=False)
+    state_dict.update({emb[0]: emb[1]})
+    
     video_base_model.load_state_dict(state_dict)
     video_model = VideoClassificationModel(video_base_model, device=device)
 
     # AUDIO
     audio_base_model = ConvNet(num_labels)
-    save_name = '/cephfs/home/yashkens/MultimodalERC/Concatenation/checkpoints/1d_cnn_with_opensmile.pt'
+    save_name = f'{model_path}1d_cnn_with_opensmile.pt'
     checkpoint = torch.load(save_name)
     audio_base_model.load_state_dict(checkpoint['model_state_dict'])
     audio_model = AudioClassificationModel(audio_base_model, device=device)
