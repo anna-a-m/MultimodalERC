@@ -4,7 +4,8 @@ from tqdm import tqdm
 from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader
 from transformers import AutoProcessor, AutoTokenizer, AutoModelForSequenceClassification
-from custom_datasets import MultimodalDataset
+# fixed import for model inference
+from multimodal_concat.custom_datasets import MultimodalDataset
 from models import TextClassificationModel, XCLIPClassificaionModel, \
     VideoClassificationModel, ConvNet, AudioClassificationModel
 from transformers import logging
