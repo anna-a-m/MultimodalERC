@@ -12,12 +12,6 @@ from transformers import logging
 logging.set_verbosity_error()
 
 
-from functools import partial
-import pickle
-pickle.load = partial(pickle.load, encoding="latin1")
-pickle.Unpickler = partial(pickle.Unpickler, encoding="latin1")
-
-
 def add_utt_numeration(df):
     dialog_nums = df['dialog num'].unique().tolist()
     utt_ids = []
@@ -122,10 +116,10 @@ def prepare_models(num_labels, model_path, device='cuda'):  # TODO: add paths to
         num_labels=num_labels
     )
     save_name = f'{model_path}bert-large-uncased_none_seed-42.pt'
-    state_dict = torch.load(save_name, map_location=lambda storage, loc: storage, pickle_module=pickle)
+    state_dict = torch.load(save_name)
     
     # fix keys unmatching
-    state_dict = torch.load(save_name, map_location=lambda storage, loc: storage, pickle_module=pickle)
+    state_dict = torch.load(save_name)
     state_dict.popitem(last=False)
     
     text_base_model.load_state_dict(state_dict)
@@ -134,7 +128,7 @@ def prepare_models(num_labels, model_path, device='cuda'):  # TODO: add paths to
     # VIDEO
     video_base_model = XCLIPClassificaionModel(num_labels)
     save_name = f'{model_path}XCLIP_Augmented.pt'
-    state_dict = torch.load(save_name, map_location=lambda storage, loc: storage, pickle_module=pickle)
+    state_dict = torch.load(save_name)
     
     # fix keys unmatching
     emb = state_dict.popitem(last=False)
@@ -147,7 +141,7 @@ def prepare_models(num_labels, model_path, device='cuda'):  # TODO: add paths to
     # AUDIO
     audio_base_model = ConvNet(num_labels)
     save_name = f'{model_path}1d_cnn_with_opensmile.pt'
-    checkpoint = torch.load(save_name, map_location=lambda storage, loc: storage, pickle_module=pickle)
+    checkpoint = torch.load(save_name)
     audio_base_model.load_state_dict(checkpoint['model_state_dict'])
     audio_model = AudioClassificationModel(audio_base_model, device=device)
 
