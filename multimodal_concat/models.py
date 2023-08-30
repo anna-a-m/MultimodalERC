@@ -319,6 +319,6 @@ class MainModel:
                 return None
 
             # wandb.log({"train loss": avg_train_loss, "val loss": avg_val_loss,
-                       "train F1": avg_train_f1, "val F1": avg_val_f1,
-                       "epoch": epoch})
+            #            "train F1": avg_train_f1, "val F1": avg_val_f1,
+            #            "epoch": epoch})
         return None
