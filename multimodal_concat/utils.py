@@ -121,7 +121,7 @@ def prepare_models(num_labels, model_path, device='cuda'):  # TODO: add paths to
     text_model = TextClassificationModel(text_base_model, device=device)
 
     # VIDEO
-    video_base_model = XCLIPClassificaionModel(num_labels)
+    video_base_model = XCLIPClassificationModel(num_labels)
     save_name = f'{model_path}XCLIP_Augmented.pt'
     state_dict = torch.load(save_name)
     video_base_model.load_state_dict(state_dict, strict=False)
