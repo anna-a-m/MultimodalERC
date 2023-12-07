@@ -168,7 +168,7 @@ class AudioClassificationModel:
 
 class MultimodalClassificationModel(nn.Module):
     def __init__(self, text_model, video_model, audio_model, num_labels, input_size, hidden_size=256):
-        super(MultimodalClassificaionModel, self).__init__()
+        super(MultimodalClassificationModel, self).__init__()
 
         self.text_model = text_model
         self.video_model = video_model
