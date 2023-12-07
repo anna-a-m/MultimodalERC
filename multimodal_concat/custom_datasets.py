@@ -1,3 +1,4 @@
+
 import os
 import cv2
 import torch
@@ -54,7 +55,7 @@ class MultimodalDataset(Dataset):
         video_path = f"{self.data_part}/dia{dialog_num}_utt{utt_num}/cutFrames"
         video_encoding = self.get_video_item(video_path)
         # TODO: should also be done through path, not index! (audio csv files do not provide it now)
-        audio_encoding = self.audio_data[idx]
+        audio_encoding = self.audio_data.loc[idx][1:-1].values.reshape((1, 6191)).astype('float')
         return {'text': text_encoding, 'video': video_encoding, 'audio': audio_encoding, 'label': label}
 
     def __len__(self):

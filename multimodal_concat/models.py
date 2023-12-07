@@ -1,9 +1,10 @@
-# import wandb
+import wandb
 import torch
 from transformers import AutoProcessor, XCLIPVisionModel, AutoModel
 from sklearn.metrics import f1_score
 from torch.nn import DataParallel
 from torch import nn
+import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 from transformers import logging
 logging.set_verbosity_error()
@@ -37,7 +38,7 @@ class TextClassificationModel:
             return pred
 
 
-class XCLIPClassificaionModel(nn.Module):
+class XCLIPClassificationModel(nn.Module):
     def __init__(self, num_labels):
         super(XCLIPClassificaionModel, self).__init__()
 
@@ -53,7 +54,7 @@ class XCLIPClassificaionModel(nn.Module):
         self.pool2 = nn.AdaptiveAvgPool1d(1)
 
     def forward(self, pixel_values, labels=None, return_last_hidden_state=False):
-
+        
         batch_size, num_frames, num_channels, height, width = pixel_values.shape
         pixel_values = pixel_values.reshape(-1, num_channels, height, width)
 
@@ -101,6 +102,7 @@ class VideoClassificationModel:
             pred = torch.argmax(logits, dim=1)
             if return_last_hidden_state:
                 hidden_states = output['last_hidden_state']
+
         if return_last_hidden_state:
             return pred, hidden_states
         else:
@@ -108,24 +110,34 @@ class VideoClassificationModel:
 
 
 class ConvNet(nn.Module):
-    def __init__(self, num_labels):
+    def __init__(self, num_labels, n_input=1, n_channel=32):
         super(ConvNet, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=1)
-        self.pool = nn.MaxPool1d(kernel_size=2)
+        self.ln0 = nn.LayerNorm((1, 6191))
+        self.conv1 = nn.Conv1d(n_input, n_channel, kernel_size=3)
+        self.conv2 = nn.Conv1d(n_channel, n_channel, kernel_size=3)
+        self.bn1 = nn.BatchNorm1d(n_channel)
+        self.bn2 = nn.BatchNorm1d(n_channel)
+        self.pool1 = nn.MaxPool1d(2)
+        self.fc1 = nn.Linear(n_channel*3093, 3093)
+        self.fc2 = nn.Linear(3093, num_labels)
         self.flat = nn.Flatten()
-        self.fc1 = nn.Linear(3186 * 32, 128)
-        self.fc2 = nn.Linear(128, num_labels)
+        self.dropout = nn.Dropout(0.3)
 
     def forward(self, x, return_last_hidden_state=False):
-        x = torch.relu(self.conv1(x))
-        x = self.pool(x)
+        x = self.ln0(x)
+        x = self.conv1(x)
+        x = F.relu(self.bn1(x))
+        x = self.conv2(x)
+        x = F.relu(self.bn2(x))
+        x = self.pool1(x)
+        x = self.dropout(x)
         x = self.flat(x)
-        hid = torch.relu(self.fc1(x))
+        hid = F.relu(self.fc1(x))
         x = self.fc2(hid)
         if not return_last_hidden_state:
-            return {'logits': x}
+            return {'logits': F.log_softmax(x, dim=1)}
         else:
-            return {'logits': x, 'last_hidden_state': hid}
+            return {'logits': F.log_softmax(x, dim=1), 'last_hidden_state': hid}
 
 
 class AudioClassificationModel:
@@ -147,13 +159,14 @@ class AudioClassificationModel:
             pred = torch.argmax(logits, dim=1)
             if return_last_hidden_state:
                 hidden_state = output['last_hidden_state']
+                
         if return_last_hidden_state:
             return pred, hidden_state
         else:
             return pred
 
 
-class MultimodalClassificaionModel(nn.Module):
+class MultimodalClassificationModel(nn.Module):
     def __init__(self, text_model, video_model, audio_model, num_labels, input_size, hidden_size=256):
         super(MultimodalClassificaionModel, self).__init__()
 
@@ -162,16 +175,14 @@ class MultimodalClassificaionModel(nn.Module):
         self.audio_model = audio_model
         self.num_labels = num_labels
 
+        # self.linear1 = nn.Linear(input_size, self.num_labels)
         self.linear1 = nn.Linear(input_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, self.num_labels)
-        self.relu1 = nn.ReLU()
-        self.drop1 = nn.Dropout()
-        # self.linear1 = nn.Linear(input_size, hidden_size)
         # self.linear2 = nn.Linear(hidden_size, hidden_size // 2)
         # self.linear3 = nn.Linear(hidden_size // 2, self.num_labels)
-        # self.relu1 = nn.ReLU()
+        self.relu1 = nn.ReLU()
         # self.relu2 = nn.ReLU()
-        # self.drop1 = nn.Dropout()
+        self.drop1 = nn.Dropout()
         # self.drop2 = nn.Dropout()
         self.loss_func = CrossEntropyLoss()
 
@@ -194,9 +205,6 @@ class MultimodalClassificaionModel(nn.Module):
         hidden_state = self.linear1(concat_input)
         hidden_state = self.drop1(self.relu1(hidden_state))
         logits = self.linear2(hidden_state)
-        # hidden_state = self.linear1(concat_input)
-        # hidden_state = self.drop1(self.relu1(hidden_state))
-        # hidden_state = self.linear2(hidden_state)
         # hidden_state = self.drop2(self.relu2(hidden_state))
         # logits = self.linear3(hidden_state)
         # logits = self.linear1(concat_input)
@@ -294,7 +302,7 @@ class MainModel:
                 fscore = f1_score(labels.cpu().numpy(), pred.cpu().numpy(), average='weighted')
                 train_fscore += fscore
 
-                # wandb.log({"batch train loss": loss.item()})
+                wandb.log({"batch train loss": loss.item()})
 
             avg_train_loss = train_loss / len(train_dataloader)
             avg_train_f1 = train_fscore / len(train_dataloader)
@@ -318,7 +326,7 @@ class MainModel:
             if no_improv_epochs > patience:
                 return None
 
-            # wandb.log({"train loss": avg_train_loss, "val loss": avg_val_loss,
-            #            "train F1": avg_train_f1, "val F1": avg_val_f1,
-            #            "epoch": epoch})
+            wandb.log({"train loss": avg_train_loss, "val loss": avg_val_loss,
+                       "train F1": avg_train_f1, "val F1": avg_val_f1,
+                       "epoch": epoch})
         return None

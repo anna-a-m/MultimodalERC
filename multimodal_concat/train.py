@@ -7,7 +7,7 @@ import numpy as np
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 from utils import prepare_data, prepare_models, test
-from models import MultimodalClassificaionModel, MainModel
+from models import MultimodalClassificationModel, MainModel
 from transformers import logging
 logging.set_verbosity_error()
 
@@ -41,12 +41,12 @@ def train_net(config=None):
         num_labels, train_dataloader, test_dataloader, dev_dataloader = prepare_data(config.bs)
         text_model, video_model, audio_model = prepare_models(num_labels)
 
-        multi_model = MultimodalClassificaionModel(
+        multi_model = MultimodalClassificationModel(
             text_model,
             video_model,
             audio_model,
             num_labels,
-            input_size=1920,  # audio is only 128?
+            input_size=4885,  
             hidden_size=config.hidden_size
         )
 
