@@ -40,7 +40,7 @@ class TextClassificationModel:
 
 class XCLIPClassificationModel(nn.Module):
     def __init__(self, num_labels):
-        super(XCLIPClassificaionModel, self).__init__()
+        super(XCLIPClassificationModel, self).__init__()
 
         self.base_model = XCLIPVisionModel.from_pretrained("microsoft/xclip-base-patch32")
         self.num_labels = num_labels
