@@ -1,4 +1,4 @@
-import wandb
+# import wandb
 import torch
 from transformers import AutoProcessor, XCLIPVisionModel, AutoModel
 from sklearn.metrics import f1_score
@@ -302,7 +302,7 @@ class MainModel:
                 fscore = f1_score(labels.cpu().numpy(), pred.cpu().numpy(), average='weighted')
                 train_fscore += fscore
 
-                wandb.log({"batch train loss": loss.item()})
+                # wandb.log({"batch train loss": loss.item()})
 
             avg_train_loss = train_loss / len(train_dataloader)
             avg_train_f1 = train_fscore / len(train_dataloader)
@@ -326,7 +326,7 @@ class MainModel:
             if no_improv_epochs > patience:
                 return None
 
-            wandb.log({"train loss": avg_train_loss, "val loss": avg_val_loss,
-                       "train F1": avg_train_f1, "val F1": avg_val_f1,
-                       "epoch": epoch})
+            # wandb.log({"train loss": avg_train_loss, "val loss": avg_val_loss,
+            #           "train F1": avg_train_f1, "val F1": avg_val_f1,
+            #           "epoch": epoch})
         return None
